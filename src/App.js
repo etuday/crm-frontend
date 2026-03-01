@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import Login from "./pages/Login";
 import CreateTicket from "./pages/CreateTicket";
 
 function App() {
@@ -9,7 +9,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/create" element={<CreateTicket />} />
+        <Route path="/create-ticket" element={<CreateTicket />} />
       </Routes>
     </Router>
   );

@@ -9,51 +9,67 @@
 // export default CreateTicket;
 
 
-import { useState } from "react";
+import React, { useState } from "react";
 import API from "../services/api";
-import Navbar from "../components/Navbar";
+import { useNavigate } from "react-router-dom";
 
 function CreateTicket() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState("Medium");
 
-  const submit = async (e) => {
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    await API.post("/api/tickets", {
-      title,
-      description,
-      priority: "Medium",
-    });
 
-    alert("Ticket Created");
-    window.location.href = "/dashboard";
+    try {
+      await API.post("/api/tickets", {
+        title,
+        description,
+        priority,
+      });
+
+      navigate("/dashboard");
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
-    <>
-      <Navbar />
-      <div className="container">
-        <h2>Raise Ticket</h2>
-        <form onSubmit={submit}>
-          <input
-            type="text"
-            placeholder="Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
-          <br /><br />
-          <textarea
-            placeholder="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-          />
-          <br /><br />
-          <button className="btn-primary">Submit</button>
-        </form>
-      </div>
-    </>
+    <div className="dashboard-container">
+      <h2>Raise Ticket</h2>
+
+      <form onSubmit={handleSubmit} className="ticket-form">
+        <input
+          type="text"
+          placeholder="Title"
+          required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+
+        <textarea
+          placeholder="Description"
+          required
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+
+        <select
+          value={priority}
+          onChange={(e) => setPriority(e.target.value)}
+        >
+          <option>Low</option>
+          <option>Medium</option>
+          <option>High</option>
+        </select>
+
+        <button type="submit" className="btn-primary">
+          Submit Ticket
+        </button>
+      </form>
+    </div>
   );
 }
 

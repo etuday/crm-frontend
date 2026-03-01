@@ -18,7 +18,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "https://crm-backend-3-esvu.onrender.com",
+  baseURL: "https://crm-backend-12.onrender.com",
 });
 
 API.interceptors.request.use((req) => {
