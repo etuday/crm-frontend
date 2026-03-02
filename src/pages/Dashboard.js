@@ -3,112 +3,100 @@ import API from "../services/api";
 
 function Dashboard() {
   const [tickets, setTickets] = useState([]);
+  const [agents, setAgents] = useState([]);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-  const [showForm, setShowForm] = useState(false);
-
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
 
   const role = localStorage.getItem("role");
-  const AGENT_ID = "699fb60987751998b5342ea4";
 
+  // ================= FETCH DATA =================
   const fetchTickets = async () => {
-    try {
-      const res = await API.get("/api/tickets");
-      setTickets(res.data);
-    } catch (error) {
-      console.error(error);
+    const res = await API.get("/api/tickets");
+    setTickets(res.data);
+  };
+
+  const fetchAgents = async () => {
+    if (role === "Admin") {
+      const res = await API.get("/api/users/agents");
+      setAgents(res.data);
     }
   };
 
   useEffect(() => {
     fetchTickets();
+    fetchAgents();
   }, []);
 
-  // ADMIN
-  const assignTicket = async (id) => {
-    await API.put(`/api/tickets/assign/${id}`, {
-      assignedTo: AGENT_ID,
+  // ================= CREATE TICKET (USER) =================
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+
+  const createTicket = async (e) => {
+    e.preventDefault();
+    await API.post("/api/tickets", { title, description });
+    setTitle("");
+    setDescription("");
+    fetchTickets();
+  };
+
+  // ================= ASSIGN (ADMIN) =================
+  const assignTicket = async (ticketId, agentId) => {
+    await API.put(`/api/tickets/assign/${ticketId}`, {
+      assignedTo: agentId,
     });
     fetchTickets();
   };
 
-  const deleteTicket = async (id) => {
-    await API.delete(`/api/tickets/${id}`);
-    fetchTickets();
-  };
-
-  // AGENT
+  // ================= UPDATE STATUS (AGENT) =================
   const updateStatus = async (id, status) => {
     await API.put(`/api/tickets/${id}`, { status });
     fetchTickets();
   };
 
-  // USER
-  const raiseTicket = async (e) => {
-    e.preventDefault();
-    if (!title) return;
-
-    await API.post("/api/tickets", { title, description });
-
-    setTitle("");
-    setDescription("");
-    setShowForm(false);
+  // ================= DELETE (ADMIN) =================
+  const deleteTicket = async (id) => {
+    await API.delete(`/api/tickets/${id}`);
     fetchTickets();
   };
 
+  // ================= LOGOUT =================
   const logout = () => {
     localStorage.clear();
     window.location.href = "/";
   };
 
-  const filteredTickets = tickets.filter((ticket) => {
-    return (
-      ticket.title.toLowerCase().includes(search.toLowerCase()) &&
-      (filterStatus === "" || ticket.status === filterStatus)
-    );
-  });
+  // ================= FILTER =================
+  const filteredTickets = tickets.filter(
+    (t) =>
+      t.title.toLowerCase().includes(search.toLowerCase()) &&
+      (filterStatus === "" || t.status === filterStatus)
+  );
 
   return (
     <div className="dashboard-container">
-
-      {/* HEADER */}
       <div className="header">
         <h2>Dashboard</h2>
-        <button className="btn-danger" onClick={logout}>
+        <button className="logout-btn" onClick={logout}>
           Logout
         </button>
       </div>
 
-      {/* USER BUTTON ONLY */}
+      {/* USER: RAISE TICKET */}
       {role === "User" && (
-        <>
-          <button
-            className="btn-primary"
-            style={{ marginBottom: "20px" }}
-            onClick={() => setShowForm(!showForm)}
-          >
-            + Raise Ticket
-          </button>
-
-          {showForm && (
-            <form className="raise-form" onSubmit={raiseTicket}>
-              <input
-                type="text"
-                placeholder="Title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-              <textarea
-                placeholder="Description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-              <button className="btn-success">Submit</button>
-            </form>
-          )}
-        </>
+        <form className="ticket-form" onSubmit={createTicket}>
+          <input
+            placeholder="Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+          />
+          <textarea
+            placeholder="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+          <button className="btn-primary">Raise Ticket</button>
+        </form>
       )}
 
       {/* SEARCH */}
@@ -132,72 +120,80 @@ function Dashboard() {
       </div>
 
       {/* TABLE */}
-      <table className="ticket-table">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Status</th>
-            <th>Created</th>
-            <th>Assigned Date</th>
-            {role !== "User" && <th>Actions</th>}
-          </tr>
-        </thead>
-
-        <tbody>
-          {filteredTickets.map((ticket) => (
-            <tr key={ticket._id}>
-              <td>{ticket.title}</td>
-              <td>{ticket.status}</td>
-              <td>
-                {new Date(ticket.createdAt).toLocaleDateString()}
-              </td>
-              <td>
-                {ticket.assignedAt
-                  ? new Date(ticket.assignedAt).toLocaleDateString()
-                  : "Not Assigned"}
-              </td>
-
-              {/* ADMIN */}
-              {role === "Admin" && (
-                <td>
-                  {!ticket.assignedTo && (
-                    <button
-                      className="btn-primary"
-                      onClick={() => assignTicket(ticket._id)}
-                    >
-                      Assign
-                    </button>
-                  )}
-
-                  <button
-                    className="btn-danger"
-                    onClick={() => deleteTicket(ticket._id)}
-                    style={{ marginLeft: "8px" }}
-                  >
-                    Delete
-                  </button>
-                </td>
-              )}
-
-              {/* AGENT */}
-              {role === "Agent" && (
-                <td>
-                  <select
-                    value={ticket.status}
-                    onChange={(e) =>
-                      updateStatus(ticket._id, e.target.value)
-                    }
-                  >
-                    <option value="Open">Open</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Closed">Closed</option>
-                  </select>
-                </td>
-              )}
+      <div className="table-wrapper">
+        <table className="ticket-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th>Assigned Date</th>
+              {role !== "User" && <th>Actions</th>}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+
+          <tbody>
+            {filteredTickets.map((ticket) => (
+              <tr key={ticket._id}>
+                <td>{ticket.title}</td>
+
+                <td>
+                  {role === "Agent" ? (
+                    <select
+                      value={ticket.status}
+                      onChange={(e) =>
+                        updateStatus(ticket._id, e.target.value)
+                      }
+                    >
+                      <option value="Open">Open</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Closed">Closed</option>
+                    </select>
+                  ) : (
+                    ticket.status
+                  )}
+                </td>
+
+                <td>
+                  {new Date(ticket.createdAt).toLocaleDateString()}
+                </td>
+
+                <td>
+                  {ticket.assignedAt
+                    ? new Date(ticket.assignedAt).toLocaleDateString()
+                    : "Not Assigned"}
+                </td>
+
+                {role === "Admin" && (
+                  <td>
+                    {!ticket.assignedTo && (
+                      <select
+                        onChange={(e) =>
+                          assignTicket(ticket._id, e.target.value)
+                        }
+                      >
+                        <option>Select Agent</option>
+                        {agents.map((agent) => (
+                          <option key={agent._id} value={agent._id}>
+                            {agent.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+
+                    <button
+                      className="btn-danger"
+                      onClick={() => deleteTicket(ticket._id)}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
